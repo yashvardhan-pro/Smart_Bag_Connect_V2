@@ -3,16 +3,46 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useBluetooth } from "@/hooks/use-bluetooth";
+import { AlertOverlay } from "@/components/alert-overlay";
+import { NavHeader, BottomNav } from "@/components/nav-header";
+
+// Pages
+import Dashboard from "@/pages/dashboard";
+import TimetablePage from "@/pages/timetable";
+import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const bluetooth = useBluetooth();
+
   return (
-    <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <AlertOverlay isOpen={bluetooth.isAlerting} onDismiss={bluetooth.stopAlarm} />
+      
+      <NavHeader 
+        status={bluetooth.status} 
+        onConnect={bluetooth.connect} 
+        onDisconnect={bluetooth.disconnect} 
+      />
+
+      <main className="max-w-md mx-auto px-4 pt-20 min-h-screen">
+        <Switch>
+          <Route path="/">
+            <Dashboard bluetooth={bluetooth} />
+          </Route>
+          <Route path="/timetable">
+            <TimetablePage bluetooth={bluetooth} />
+          </Route>
+          <Route path="/settings">
+            <SettingsPage bluetooth={bluetooth} />
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
+      </main>
+
+      <BottomNav />
+    </>
   );
 }
 
