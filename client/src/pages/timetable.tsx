@@ -19,12 +19,26 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
   const updateTimetable = useUpdateTimetable();
   const { toast } = useToast();
 
-  const currentSubjects = timetables?.find(t => t.day === activeDay)?.subjects || [];
+  const currentTimetable = timetables?.find(t => t.day === activeDay);
+  const [subject1, setSubject1] = useState("");
+  const [subject2, setSubject2] = useState("");
 
-  const handleSave = async (subjects: string[]) => {
+  // Sync local state when activeDay or data changes
+  useState(() => {
+    if (currentTimetable) {
+      setSubject1(currentTimetable.subject1 || "");
+      setSubject2(currentTimetable.subject2 || "");
+    }
+  });
+
+  const handleSave = async () => {
     try {
-      await updateTimetable.mutateAsync({ day: activeDay, subjects });
-      // toast handled by mutation logic ideally, but nice to confirm specific action
+      await updateTimetable.mutateAsync({ 
+        day: activeDay, 
+        subject1, 
+        subject2 
+      });
+      toast({ title: "Success", description: "Schedule saved locally." });
     } catch (e) {
       toast({ title: "Error", description: "Failed to save schedule.", variant: "destructive" });
     }
@@ -36,13 +50,10 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
       return;
     }
     
-    // Format: "DAY:MON,SUB:Math,Eng"
-    // Shorten day to 3 chars
-    const shortDay = activeDay.substring(0, 3).toUpperCase();
-    const subString = currentSubjects.join(",");
-    const payload = `DAY:${shortDay},SUB:${subString}`;
-    
+    // Format: "Day| Subject1| Subject2"
+    const payload = `${activeDay}| ${subject1}| ${subject2}`;
     await bluetooth.sendData(payload);
+    toast({ title: "Synced", description: "Sent to bag." });
   };
 
   return (
@@ -54,7 +65,7 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
         </div>
         <Button 
           onClick={handleSync}
-          disabled={bluetooth.status !== "connected" || currentSubjects.length === 0}
+          disabled={bluetooth.status !== "connected"}
           className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
         >
           <Send className="w-4 h-4 mr-2" />
@@ -62,7 +73,12 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue={DAYS[0]} value={activeDay} onValueChange={setActiveDay} className="w-full flex-1 flex flex-col">
+      <Tabs defaultValue={DAYS[0]} value={activeDay} onValueChange={(v) => {
+        setActiveDay(v);
+        const t = timetables?.find(item => item.day === v);
+        setSubject1(t?.subject1 || "");
+        setSubject2(t?.subject2 || "");
+      }} className="w-full flex-1 flex flex-col">
         <ScrollableTabsList days={DAYS} />
         
         <div className="mt-6 flex-1 bg-card/30 border border-border/50 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden">
@@ -71,17 +87,36 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
-            <SubjectList 
-              subjects={currentSubjects}
-              onChange={handleSave}
-              isLoading={updateTimetable.isPending}
-            />
-          )}
-
-          {updateTimetable.isPending && (
-             <div className="absolute top-4 right-4">
-               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-             </div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Subject 1</label>
+                <input 
+                  value={subject1} 
+                  onChange={(e) => setSubject1(e.target.value)}
+                  placeholder="e.g. Mathematics"
+                  className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Subject 2</label>
+                <input 
+                  value={subject2} 
+                  onChange={(e) => setSubject2(e.target.value)}
+                  placeholder="e.g. Physics"
+                  className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+              </div>
+              
+              <Button 
+                onClick={handleSave} 
+                className="w-full h-12 rounded-xl mt-4" 
+                variant="secondary"
+                disabled={updateTimetable.isPending}
+              >
+                {updateTimetable.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Save Changes
+              </Button>
+            </div>
           )}
         </div>
       </Tabs>
