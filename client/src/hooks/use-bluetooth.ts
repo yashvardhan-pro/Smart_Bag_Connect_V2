@@ -8,6 +8,36 @@ const CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
 
 type BluetoothStatus = "disconnected" | "connecting" | "connected" | "error";
 
+declare global {
+  interface Navigator {
+    bluetooth: {
+      requestDevice(options: { filters: { services: string[] }[] }): Promise<BluetoothDevice>;
+    };
+  }
+
+  interface BluetoothDevice extends EventTarget {
+    gatt?: BluetoothRemoteGATTServer;
+    removeEventListener(type: string, callback: EventListenerOrEventListenerObject): void;
+  }
+
+  interface BluetoothRemoteGATTServer {
+    connect(): Promise<BluetoothRemoteGATTServer>;
+    connected: boolean;
+    disconnect(): void;
+    getPrimaryService(service: string): Promise<BluetoothRemoteGATTService>;
+  }
+
+  interface BluetoothRemoteGATTService {
+    getCharacteristic(characteristic: string): Promise<BluetoothRemoteGATTCharacteristic>;
+  }
+
+  interface BluetoothRemoteGATTCharacteristic extends EventTarget {
+    startNotifications(): Promise<BluetoothRemoteGATTCharacteristic>;
+    writeValue(value: BufferSource): Promise<void>;
+    value?: DataView;
+  }
+}
+
 export function useBluetooth() {
   const [status, setStatus] = useState<BluetoothStatus>("disconnected");
   const [device, setDevice] = useState<BluetoothDevice | null>(null);

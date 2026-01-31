@@ -78,3 +78,10 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
+
+// ============================================
+// TYPE HELPERS — Infer types from schemas
+// ============================================
+export type UpdateTimetableRequest = z.infer<typeof api.timetables.update.input>;
+export type CreateAlertRequest = z.infer<typeof api.alerts.create.input>;
+

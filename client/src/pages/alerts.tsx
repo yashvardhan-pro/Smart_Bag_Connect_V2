@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import type { Alert } from "@/shared/schema";
+import type { Alert } from "@shared/schema";
 
 export default function AlertsPage() {
   const { toast } = useToast();
