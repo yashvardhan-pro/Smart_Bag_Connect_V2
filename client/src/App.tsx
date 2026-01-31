@@ -10,6 +10,7 @@ import { NavHeader, BottomNav } from "@/components/nav-header";
 // Pages
 import Dashboard from "@/pages/dashboard";
 import TimetablePage from "@/pages/timetable";
+import AlertsPage from "@/pages/alerts";
 import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -33,6 +34,9 @@ function Router() {
           </Route>
           <Route path="/timetable">
             <TimetablePage bluetooth={bluetooth} />
+          </Route>
+          <Route path="/alerts">
+            <AlertsPage />
           </Route>
           <Route path="/settings">
             <SettingsPage bluetooth={bluetooth} />

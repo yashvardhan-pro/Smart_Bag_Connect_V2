@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Battery, Bluetooth, LayoutDashboard, Calendar, Settings } from "lucide-react";
+import { Battery, Bluetooth, LayoutDashboard, Calendar, Settings, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavHeaderProps {
@@ -57,6 +57,7 @@ export function BottomNav() {
   const links = [
     { href: "/", icon: LayoutDashboard, label: "Dash" },
     { href: "/timetable", icon: Calendar, label: "Schedule" },
+    { href: "/alerts", icon: Bell, label: "Alerts" },
     { href: "/settings", icon: Settings, label: "System" },
   ];
 
