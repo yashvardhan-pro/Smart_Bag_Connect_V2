@@ -118,6 +118,15 @@ export function useBluetooth() {
   }, [triggerAlarm]);
 
   const connect = useCallback(async () => {
+    if (!navigator.bluetooth) {
+      toast({ 
+        title: "Bluetooth Not Supported", 
+        description: "Your browser doesn't support Web Bluetooth or you're not on a secure (HTTPS) connection.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setStatus("connecting");
       
