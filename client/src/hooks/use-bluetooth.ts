@@ -157,7 +157,8 @@ export function useBluetooth() {
 
       await characteristic.startNotifications();
       characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
-
+      
+      // Store characteric and mark as connected
       setCharacteristic(characteristic);
       setStatus("connected");
       toast({ title: "Connected", description: "Smart Bag linked successfully." });
