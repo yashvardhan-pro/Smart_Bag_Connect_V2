@@ -77,7 +77,7 @@ export default function AlertsPage() {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-muted-foreground">
-                        {format(new Date(alert.receivedAt), "MMM d, HH:mm:ss")}
+                        {alert.receivedAt ? format(new Date(alert.receivedAt), "MMM d, HH:mm:ss") : "—"}
                       </span>
                       {!alert.isRead && (
                         <span className="w-2 h-2 rounded-full bg-primary" />
