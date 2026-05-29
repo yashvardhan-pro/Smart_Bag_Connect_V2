@@ -1,0 +1,66 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pinGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF4444"></stop>
+      <stop offset="100%" stop-color="#CC0000"></stop>
+    </linearGradient>
+    <linearGradient id="shadowGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.3"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="innerCircleGrad" cx="0.4" cy="0.35" r="0.6">
+      <stop offset="0%" stop-color="#FFFFFF"></stop>
+      <stop offset="100%" stop-color="#FFCCCC"></stop>
+    </radialGradient>
+    <radialGradient id="shineGrad" cx="0.35" cy="0.3" r="0.5">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"></stop>
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.1"></stop>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+  
+  
+  <ellipse cx="512" cy="880" rx="140" ry="30" fill="url(#shadowGrad)"></ellipse>
+  
+  
+  <path d="M512 850 
+           C512 850 512 850 512 850
+           C480 790 340 620 340 460
+           C340 365 418 240 512 240
+           C606 240 684 365 684 460
+           C684 620 544 790 512 850Z" fill="url(#pinGrad)" stroke="#AA0000" stroke-width="4"></path>
+  
+  
+  <path d="M512 830
+           Q440 700 370 560
+           Q310 440 340 370
+           C350 310 380 260 420 230
+           Q460 205 512 200
+           Q564 205 604 230
+           C644 260 674 310 684 370
+           Q714 440 654 560
+           Q584 700 512 830Z" fill="url(#pinGrad)" stroke="#990000" stroke-width="3"></path>
+  
+  
+  <path d="M512 830
+           Q440 700 370 560
+           Q310 440 340 370
+           C350 310 380 260 420 230
+           Q460 205 512 200
+           Q564 205 604 230
+           C644 260 674 310 684 370
+           Q714 440 654 560
+           Q584 700 512 830Z" fill="url(#shineGrad)"></path>
+  
+  
+  <circle cx="512" cy="370" r="110" fill="url(#innerCircleGrad)" stroke="#CC3333" stroke-width="3"></circle>
+  
+  
+  <circle cx="512" cy="370" r="85" fill="none" stroke="#FFDDDD" stroke-width="2" opacity="0.5"></circle>
+  
+  
+  <circle cx="512" cy="370" r="20" fill="#DD2222" opacity="0.7"></circle>
+  
+  
+  <ellipse cx="470" cy="310" rx="40" ry="55" fill="#FFFFFF" opacity="0.15" transform="rotate(-15 470 310)"></ellipse>
+</svg>

@@ -53,7 +53,11 @@ function Router() {
         </Switch>
       </main>
 
-      <BottomNav />
+      <BottomNav
+        status={bluetooth.status}
+        onConnect={bluetooth.connect}
+        onDisconnect={bluetooth.disconnect}
+      />
     </>
   );
 }
