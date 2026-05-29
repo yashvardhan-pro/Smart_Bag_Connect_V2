@@ -1,7 +1,7 @@
 import { useAlerts } from "@/hooks/use-alerts";
 import { useBluetooth } from "@/hooks/use-bluetooth";
 import { format } from "date-fns";
-import { ShieldCheck, ShieldAlert, History, Activity, Bluetooth, RefreshCw, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react";
+import { ShieldCheck, ShieldAlert, History, Activity, Bluetooth, RefreshCw, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning, Eye, Shield } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 function BatteryIndicator({ level }: { level: number | null }) {
@@ -106,6 +106,43 @@ export default function Dashboard({ bluetooth }: DashboardProps) {
           )}
         </div>
       </div>
+
+      {/* Mode Toggle */}
+      <div className="rounded-2xl border border-border/50 bg-card/50 p-1 flex gap-1" data-testid="mode-toggle">
+        <button
+          onClick={() => bluetooth.setMode("normal")}
+          data-testid="button-mode-normal"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+            bluetooth.mode === "normal"
+              ? "bg-primary text-primary-foreground shadow-[0_0_16px_rgba(6,182,212,0.35)]"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          Normal Mode
+        </button>
+        <button
+          onClick={() => bluetooth.setMode("surveillance")}
+          data-testid="button-mode-surveillance"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+            bluetooth.mode === "surveillance"
+              ? "bg-amber-500 text-black shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+          }`}
+        >
+          <Eye className="w-4 h-4" />
+          Surveillance
+        </button>
+      </div>
+
+      {bluetooth.mode === "surveillance" && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-3 -mt-2">
+          <Eye className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-300 leading-relaxed">
+            <span className="font-bold">Surveillance Mode active.</span> Motion, proximity, and all sensor triggers will fire the alarm. Switch to Normal Mode to ignore passive sensor events.
+          </p>
+        </div>
+      )}
 
       {/* Alerts Feed */}
       <div className="space-y-4">

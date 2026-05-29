@@ -46,8 +46,20 @@ export function useBluetooth() {
   const [alertType, setAlertType] = useState<"intrusion" | "water" | "override" | "surveillance" | null>(null);
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [bagLocation, setBagLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [mode, setMode] = useState<"normal" | "surveillance">(() => {
+    try { return (localStorage.getItem("smartbag_mode") as "normal" | "surveillance") || "normal"; } catch { return "normal"; }
+  });
+
+  const setModeAndPersist = (m: "normal" | "surveillance") => {
+    setMode(m);
+    try { localStorage.setItem("smartbag_mode", m); } catch {}
+  };
   const { toast } = useToast();
   const createAlert = useCreateAlert();
+
+  // Keep a ref so handleMessage always reads the latest mode without re-creating the callback
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
 
   // Native-mode state
   const nativeDeviceId = useRef<string | null>(null);
@@ -142,7 +154,9 @@ export function useBluetooth() {
     } else if (message.includes("OVERRIDE")) {
       triggerAlarm("override");
     } else if (message.includes("SURVEILLANCE") || message.includes("MOTION") || message.includes("PROXIMITY")) {
-      triggerAlarm("surveillance");
+      if (modeRef.current === "surveillance") {
+        triggerAlarm("surveillance");
+      }
     }
   }, [triggerAlarm]);
 
@@ -322,5 +336,7 @@ export function useBluetooth() {
     stopAlarm,
     batteryLevel,
     bagLocation,
+    mode,
+    setMode: setModeAndPersist,
   };
 }
