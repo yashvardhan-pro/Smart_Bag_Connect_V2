@@ -51,14 +51,14 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
   return (
     <div className="pt-2 pb-24 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <div>
+        <div className="bg-[#00000000]">
           <h2 className="text-2xl font-bold">Meetings</h2>
           <p className="text-muted-foreground text-sm">Manage daily meetings</p>
         </div>
         <Button
           onClick={handleSync}
           disabled={bluetooth.status !== "connected"}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+          className="bg-[#002bffe6] hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
         >
           <Send className="w-4 h-4 mr-2" />
           Sync Day
