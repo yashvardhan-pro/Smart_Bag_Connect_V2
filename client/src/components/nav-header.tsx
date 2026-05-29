@@ -23,9 +23,18 @@ export function NavHeader({ status, onConnect, onDisconnect }: NavHeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
       <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
-        <h1 className="text-xl tracking-widest bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-bold">
-          SMARTBAG<span className="text-xs align-top opacity-70">OS</span>
-        </h1>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/settings"
+            data-testid="nav-link-settings"
+            className="p-2 rounded-xl hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <Settings className="w-5 h-5" />
+          </Link>
+          <h1 className="text-xl tracking-widest bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-bold">
+            SMARTBAG<span className="text-xs align-top opacity-70">OS</span>
+          </h1>
+        </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/50 shadow-sm">
