@@ -24,6 +24,13 @@ interface SavedPlace {
 }
 
 const STORAGE_KEY = "smartbag_saved_places";
+const LAST_SEEN_KEY = "smartbag_last_seen";
+
+interface LastSeen {
+  lat: number;
+  lng: number;
+  timestamp: number;
+}
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -75,12 +82,42 @@ function makePlaceIcon(near: boolean) {
   });
 }
 
-function LiveMap({ coords, savedPlaces }: { coords: Coords; savedPlaces: SavedPlace[] }) {
+function makeBagIcon(live: boolean) {
+  return L.divIcon({
+    html: `<div style="
+      width:32px;height:32px;border-radius:50%;
+      background:${live ? "#f59e0b" : "#64748b"};
+      border:3px solid #0f172a;
+      box-shadow:0 0 14px ${live ? "rgba(245,158,11,0.7)" : "rgba(100,116,139,0.4)"};
+      display:flex;align-items:center;justify-content:center;
+    "><svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 6h-2.18c.07-.44.18-.88.18-1a3 3 0 0 0-3-3h-6a3 3 0 0 0-3 3c0 .12.11.56.18 1H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-8 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm3-9H9a1 1 0 0 1 0-2h6a1 1 0 0 1 0 2z"/>
+    </svg></div>`,
+    className: "",
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18],
+  });
+}
+
+function LiveMap({
+  coords,
+  savedPlaces,
+  bagLocation,
+  lastSeen,
+}: {
+  coords: Coords;
+  savedPlaces: SavedPlace[];
+  bagLocation: { lat: number; lng: number } | null;
+  lastSeen: LastSeen | null;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const selfMarkerRef = useRef<L.CircleMarker | null>(null);
   const accuracyCircleRef = useRef<L.Circle | null>(null);
   const placeMarkersRef = useRef<L.Marker[]>([]);
+  const bagMarkerRef = useRef<L.Marker | null>(null);
+  const lastSeenMarkerRef = useRef<L.Marker | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -151,6 +188,31 @@ function LiveMap({ coords, savedPlaces }: { coords: Coords; savedPlaces: SavedPl
     });
   }, [savedPlaces, coords]);
 
+  // Live bag GPS marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (bagMarkerRef.current) { bagMarkerRef.current.remove(); bagMarkerRef.current = null; }
+    if (bagLocation) {
+      bagMarkerRef.current = L.marker([bagLocation.lat, bagLocation.lng], { icon: makeBagIcon(true) })
+        .addTo(map)
+        .bindPopup("<div style='color:#0f172a;font-size:12px'><b>🎒 Bag (Live GPS)</b></div>");
+    }
+  }, [bagLocation]);
+
+  // Last Seen marker (only show when no live GPS)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (lastSeenMarkerRef.current) { lastSeenMarkerRef.current.remove(); lastSeenMarkerRef.current = null; }
+    if (lastSeen && !bagLocation) {
+      const when = new Date(lastSeen.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      lastSeenMarkerRef.current = L.marker([lastSeen.lat, lastSeen.lng], { icon: makeBagIcon(false) })
+        .addTo(map)
+        .bindPopup(`<div style='color:#0f172a;font-size:12px'><b>🎒 Bag last seen</b><br/>${when}</div>`);
+    }
+  }, [lastSeen, bagLocation]);
+
   return (
     <div
       ref={containerRef}
@@ -169,6 +231,7 @@ export default function LocationPage({ bluetooth }: LocationPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
+  const [lastSeen, setLastSeen] = useState<LastSeen | null>(null);
   const [newPlaceName, setNewPlaceName] = useState("");
   const [showSaveForm, setShowSaveForm] = useState(false);
   const watchId = useRef<number | null>(null);
@@ -179,7 +242,31 @@ export default function LocationPage({ bluetooth }: LocationPageProps) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setSavedPlaces(JSON.parse(raw));
     } catch {}
+    try {
+      const raw = localStorage.getItem(LAST_SEEN_KEY);
+      if (raw) setLastSeen(JSON.parse(raw));
+    } catch {}
   }, []);
+
+  // Save Last Seen whenever bag connects and we have phone GPS coords
+  const prevStatus = useRef(bluetooth.status);
+  useEffect(() => {
+    const justConnected = prevStatus.current !== "connected" && bluetooth.status === "connected";
+    prevStatus.current = bluetooth.status;
+    if (justConnected && coords) {
+      const entry: LastSeen = { lat: coords.lat, lng: coords.lng, timestamp: Date.now() };
+      setLastSeen(entry);
+      localStorage.setItem(LAST_SEEN_KEY, JSON.stringify(entry));
+    }
+  }, [bluetooth.status, coords]);
+
+  // Also update Last Seen periodically while connected
+  useEffect(() => {
+    if (bluetooth.status !== "connected" || !coords) return;
+    const entry: LastSeen = { lat: coords.lat, lng: coords.lng, timestamp: Date.now() };
+    setLastSeen(entry);
+    localStorage.setItem(LAST_SEEN_KEY, JSON.stringify(entry));
+  }, [bluetooth.status, coords]);
 
   const persistPlaces = (places: SavedPlace[]) => {
     setSavedPlaces(places);
@@ -386,12 +473,53 @@ export default function LocationPage({ bluetooth }: LocationPageProps) {
       {/* Live Map */}
       {coords ? (
         <div className="rounded-2xl overflow-hidden border border-border/50 shadow-lg">
-          <LiveMap coords={coords} savedPlaces={savedPlaces} />
+          <LiveMap coords={coords} savedPlaces={savedPlaces} bagLocation={bluetooth.bagLocation} lastSeen={lastSeen} />
         </div>
       ) : (
         <div className="rounded-2xl border border-border/50 bg-card/30 h-[280px] flex flex-col items-center justify-center text-muted-foreground opacity-40 gap-2">
           <MapPin className="w-10 h-10" />
           <p className="text-sm">Map loads once signal is acquired</p>
+        </div>
+      )}
+
+      {/* Bag GPS status card */}
+      {(bluetooth.bagLocation || lastSeen) && (
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-4 space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Bag Location</h3>
+          {bluetooth.bagLocation ? (
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                <span className="text-base">🎒</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-amber-400">Live GPS Active</p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {bluetooth.bagLocation.lat.toFixed(6)}, {bluetooth.bagLocation.lng.toFixed(6)}
+                </p>
+                {coords && (
+                  <p className="text-xs text-primary font-mono mt-0.5">
+                    {formatDistance(haversineDistance(coords.lat, coords.lng, bluetooth.bagLocation.lat, bluetooth.bagLocation.lng))} from you
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : lastSeen ? (
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-slate-500/20 flex items-center justify-center shrink-0">
+                <span className="text-base">🎒</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">Last Seen</p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {lastSeen.lat.toFixed(6)}, {lastSeen.lng.toFixed(6)}
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">
+                  {new Date(lastSeen.timestamp).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                  {coords && ` · ${formatDistance(haversineDistance(coords.lat, coords.lng, lastSeen.lat, lastSeen.lng))} from you`}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 

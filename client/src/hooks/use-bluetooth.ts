@@ -45,6 +45,7 @@ export function useBluetooth() {
   const [isAlerting, setIsAlerting] = useState(false);
   const [alertType, setAlertType] = useState<"intrusion" | "water" | "override" | "surveillance" | null>(null);
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
+  const [bagLocation, setBagLocation] = useState<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
   const createAlert = useCreateAlert();
 
@@ -123,6 +124,17 @@ export function useBluetooth() {
       return;
     }
 
+    // GPS:lat,lng — sent by bag hardware when it has a GPS module
+    const gpsMatch = raw.trim().match(/^GPS:([-\d.]+),([-\d.]+)$/i);
+    if (gpsMatch) {
+      const lat = parseFloat(gpsMatch[1]);
+      const lng = parseFloat(gpsMatch[2]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setBagLocation({ lat, lng });
+      }
+      return;
+    }
+
     if (message.includes("INTRUSION") || message.includes("ALERT")) {
       triggerAlarm("intrusion");
     } else if (message.includes("WATER")) {
@@ -184,6 +196,7 @@ export function useBluetooth() {
       nativeDeviceId.current = null;
       setStatus("disconnected");
       setBatteryLevel(null);
+      setBagLocation(null);
     }
   }, []);
 
@@ -218,6 +231,7 @@ export function useBluetooth() {
   const onWebDisconnected = useCallback(() => {
     setStatus("disconnected");
     setBatteryLevel(null);
+    setBagLocation(null);
     webCharacteristic.current = null;
     toast({ title: "Disconnected", description: "Lost connection to Smart Bag", variant: "destructive" });
   }, [toast]);
@@ -307,5 +321,6 @@ export function useBluetooth() {
     alertType,
     stopAlarm,
     batteryLevel,
+    bagLocation,
   };
 }
