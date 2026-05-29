@@ -12,6 +12,7 @@ import Dashboard from "@/pages/dashboard";
 import TimetablePage from "@/pages/timetable";
 import AlertsPage from "@/pages/alerts";
 import SettingsPage from "@/pages/settings";
+import LocationPage from "@/pages/location";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -44,6 +45,9 @@ function Router() {
           </Route>
           <Route path="/settings">
             <SettingsPage bluetooth={bluetooth} />
+          </Route>
+          <Route path="/location">
+            <LocationPage />
           </Route>
           <Route component={NotFound} />
         </Switch>
