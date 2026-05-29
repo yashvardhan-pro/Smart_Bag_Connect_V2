@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import L from "leaflet";
 import { MapPin, Navigation, Crosshair, Plus, Trash2, CheckCircle2, XCircle, Loader2, RefreshCw, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,6 +53,109 @@ function AccuracyRing({ accuracy }: { accuracy: number }) {
       <span className={`text-[10px] font-mono font-bold tracking-widest ${color}`}>{label}</span>
       <span className="text-[10px] text-muted-foreground font-mono">±{Math.round(accuracy)}m</span>
     </div>
+  );
+}
+
+function makePlaceIcon(near: boolean) {
+  return L.divIcon({
+    html: `<div style="
+      width:28px;height:28px;border-radius:50%;
+      background:${near ? "#22c55e" : "#06b6d4"};
+      border:3px solid #0f172a;
+      box-shadow:0 0 10px ${near ? "rgba(34,197,94,0.6)" : "rgba(6,182,212,0.6)"};
+      display:flex;align-items:center;justify-content:center;
+    "><svg width="14" height="14" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg></div>`,
+    className: "",
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16],
+  });
+}
+
+function LiveMap({ coords, savedPlaces }: { coords: Coords; savedPlaces: SavedPlace[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const selfMarkerRef = useRef<L.CircleMarker | null>(null);
+  const accuracyCircleRef = useRef<L.Circle | null>(null);
+  const placeMarkersRef = useRef<L.Marker[]>([]);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [coords.lat, coords.lng],
+      zoom: 17,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 20,
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.setView([coords.lat, coords.lng], map.getZoom(), { animate: true });
+
+    if (accuracyCircleRef.current) accuracyCircleRef.current.remove();
+    if (selfMarkerRef.current) selfMarkerRef.current.remove();
+
+    accuracyCircleRef.current = L.circle([coords.lat, coords.lng], {
+      radius: coords.accuracy,
+      color: "#06b6d4",
+      fillColor: "#06b6d4",
+      fillOpacity: 0.1,
+      weight: 1,
+      dashArray: "4",
+    }).addTo(map);
+
+    selfMarkerRef.current = L.circleMarker([coords.lat, coords.lng], {
+      radius: 9,
+      color: "#06b6d4",
+      fillColor: "#06b6d4",
+      fillOpacity: 1,
+      weight: 3,
+    })
+      .addTo(map)
+      .bindPopup("<b style='color:#0f172a;font-size:12px'>You are here</b>");
+  }, [coords]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    placeMarkersRef.current.forEach((m) => m.remove());
+    placeMarkersRef.current = [];
+
+    savedPlaces.forEach((place) => {
+      const dist = haversineDistance(coords.lat, coords.lng, place.lat, place.lng);
+      const isNear = dist < 50;
+      const marker = L.marker([place.lat, place.lng], { icon: makePlaceIcon(isNear) })
+        .addTo(map)
+        .bindPopup(`<div style="color:#0f172a;font-size:12px"><b>${place.name}</b><br/>${formatDistance(dist)} away</div>`);
+      placeMarkersRef.current.push(marker);
+    });
+  }, [savedPlaces, coords]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{ height: "280px", width: "100%", borderRadius: "16px" }}
+      data-testid="map-container"
+    />
   );
 }
 
@@ -158,7 +262,7 @@ export default function LocationPage() {
 
   return (
     <div className="pt-2 pb-24 space-y-5">
-      {/* Hero card */}
+      {/* Hero status card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-6 shadow-xl">
         <div className="absolute top-0 right-0 p-4 opacity-10">
           <MapPin className="w-32 h-32" />
@@ -189,11 +293,7 @@ export default function LocationPage() {
               <div>
                 <p className="text-sm text-red-400 font-medium">Location Unavailable</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
-                <button
-                  onClick={startTracking}
-                  className="mt-2 text-xs text-primary underline"
-                  data-testid="button-retry-location"
-                >
+                <button onClick={startTracking} className="mt-2 text-xs text-primary underline" data-testid="button-retry-location">
                   Try again
                 </button>
               </div>
@@ -208,49 +308,53 @@ export default function LocationPage() {
                 <AccuracyRing accuracy={coords.accuracy} />
               </div>
 
-              <div className="grid grid-cols-1 gap-2 mb-4">
-                <div className="bg-background/30 rounded-xl px-4 py-3 border border-white/5 font-mono">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Latitude</div>
-                  <div className="text-base text-primary" data-testid="text-latitude">
-                    {formatCoord(coords.lat, "N", "S")}
-                  </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="bg-background/30 rounded-xl px-3 py-2.5 border border-white/5 font-mono">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Latitude</div>
+                  <div className="text-sm text-primary" data-testid="text-latitude">{formatCoord(coords.lat, "N", "S")}</div>
                 </div>
-                <div className="bg-background/30 rounded-xl px-4 py-3 border border-white/5 font-mono">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Longitude</div>
-                  <div className="text-base text-primary" data-testid="text-longitude">
-                    {formatCoord(coords.lng, "E", "W")}
-                  </div>
+                <div className="bg-background/30 rounded-xl px-3 py-2.5 border border-white/5 font-mono">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Longitude</div>
+                  <div className="text-sm text-primary" data-testid="text-longitude">{formatCoord(coords.lng, "E", "W")}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-background/30 rounded-xl p-3 border border-white/5 text-center">
+                <div className="bg-background/30 rounded-xl p-2.5 border border-white/5 text-center">
                   <div className="text-[10px] text-muted-foreground mb-1">Accuracy</div>
-                  <div className="text-sm font-mono text-yellow-400" data-testid="text-accuracy">
-                    ±{Math.round(coords.accuracy)}m
-                  </div>
+                  <div className="text-sm font-mono text-yellow-400" data-testid="text-accuracy">±{Math.round(coords.accuracy)}m</div>
                 </div>
-                <div className="bg-background/30 rounded-xl p-3 border border-white/5 text-center">
+                <div className="bg-background/30 rounded-xl p-2.5 border border-white/5 text-center">
                   <div className="text-[10px] text-muted-foreground mb-1">Speed</div>
                   <div className="text-sm font-mono text-primary" data-testid="text-speed">
                     {coords.speed !== null ? `${(coords.speed * 3.6).toFixed(1)} km/h` : "—"}
                   </div>
                 </div>
-                <div className="bg-background/30 rounded-xl p-3 border border-white/5 text-center">
+                <div className="bg-background/30 rounded-xl p-2.5 border border-white/5 text-center">
                   <Compass className="w-3 h-3 text-muted-foreground mx-auto mb-1" />
-                  <div className="text-sm font-mono text-primary" data-testid="text-heading">
-                    {headingLabel(coords.heading)}
-                  </div>
+                  <div className="text-sm font-mono text-primary" data-testid="text-heading">{headingLabel(coords.heading)}</div>
                 </div>
               </div>
 
-              <p className="text-[10px] text-muted-foreground font-mono mt-3 text-right">
+              <p className="text-[10px] text-muted-foreground font-mono mt-2 text-right">
                 Updated {new Date(coords.timestamp).toLocaleTimeString()}
               </p>
             </>
           )}
         </div>
       </div>
+
+      {/* Live Map */}
+      {coords ? (
+        <div className="rounded-2xl overflow-hidden border border-border/50 shadow-lg">
+          <LiveMap coords={coords} savedPlaces={savedPlaces} />
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border/50 bg-card/30 h-[280px] flex flex-col items-center justify-center text-muted-foreground opacity-40 gap-2">
+          <MapPin className="w-10 h-10" />
+          <p className="text-sm">Map loads once signal is acquired</p>
+        </div>
+      )}
 
       {/* Saved places */}
       <div className="space-y-3">
@@ -285,29 +389,20 @@ export default function LocationPage() {
               onKeyDown={(e) => e.key === "Enter" && saveCurrentPlace()}
             />
             <div className="flex gap-2">
-              <Button
-                onClick={saveCurrentPlace}
-                className="flex-1 rounded-xl h-10"
-                data-testid="button-save-place"
-              >
+              <Button onClick={saveCurrentPlace} className="flex-1 rounded-xl h-10" data-testid="button-save-place">
                 <CheckCircle2 className="w-4 h-4 mr-1" />
                 Save
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowSaveForm(false)}
-                className="rounded-xl h-10"
-                data-testid="button-cancel-save"
-              >
+              <Button variant="outline" onClick={() => setShowSaveForm(false)} className="rounded-xl h-10" data-testid="button-cancel-save">
                 Cancel
               </Button>
             </div>
           </div>
         )}
 
-        <ScrollArea className="h-[260px] rounded-2xl bg-card/30 border border-border/50 p-4">
+        <ScrollArea className="h-[220px] rounded-2xl bg-card/30 border border-border/50 p-4">
           {savedPlaces.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-40 py-10">
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-40 py-8">
               <MapPin className="w-10 h-10 mb-3" />
               <p className="text-sm">No saved places yet</p>
               <p className="text-xs mt-1">Save your current location to see it here</p>
@@ -320,7 +415,7 @@ export default function LocationPage() {
                 return (
                   <div
                     key={place.id}
-                    className="bg-card hover:bg-card/80 transition-colors p-4 rounded-xl border border-border/30 flex items-start gap-3"
+                    className="bg-card hover:bg-card/80 transition-colors p-3 rounded-xl border border-border/30 flex items-start gap-3"
                     data-testid={`card-place-${place.id}`}
                   >
                     <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isNear ? "bg-green-500/20" : "bg-primary/10"}`}>
@@ -329,21 +424,16 @@ export default function LocationPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm truncate">{place.name}</span>
-                        {isNear && (
-                          <span className="text-[10px] text-green-400 font-bold tracking-wider shrink-0">HERE</span>
-                        )}
+                        {isNear && <span className="text-[10px] text-green-400 font-bold tracking-wider shrink-0">HERE</span>}
                       </div>
                       <p className="text-[11px] font-mono text-muted-foreground mt-0.5">
                         {place.lat.toFixed(5)}, {place.lng.toFixed(5)}
                       </p>
                       {dist !== null && (
-                        <p className="text-[11px] text-primary font-mono mt-1" data-testid={`text-distance-${place.id}`}>
+                        <p className="text-[11px] text-primary font-mono mt-0.5" data-testid={`text-distance-${place.id}`}>
                           {formatDistance(dist)} away
                         </p>
                       )}
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Saved {new Date(place.savedAt).toLocaleDateString()}
-                      </p>
                     </div>
                     <button
                       onClick={() => deletePlace(place.id)}
