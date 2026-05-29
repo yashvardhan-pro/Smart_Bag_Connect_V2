@@ -113,7 +113,7 @@ export default function TimetablePage({ bluetooth }: TimetablePageProps) {
 
               <Button
                 onClick={handleSave}
-                className="w-full h-12 rounded-xl mt-4"
+                className="w-full h-12 rounded-xl mt-4 bg-[#f0f0f0]"
                 variant="secondary"
                 disabled={updateTimetable.isPending}
                 data-testid="button-save-meeting"
