@@ -44,6 +44,7 @@ export function useBluetooth() {
   const [status, setStatus] = useState<BluetoothStatus>("disconnected");
   const [isAlerting, setIsAlerting] = useState(false);
   const [alertType, setAlertType] = useState<"intrusion" | "water" | "override" | "surveillance" | null>(null);
+  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const { toast } = useToast();
   const createAlert = useCreateAlert();
 
@@ -114,6 +115,14 @@ export function useBluetooth() {
   const handleMessage = useCallback((raw: string) => {
     const message = raw.trim().toUpperCase();
     console.log("[BLE] Received:", message);
+
+    const batteryMatch = message.match(/BATTERY:(\d+)/);
+    if (batteryMatch) {
+      const level = Math.min(100, Math.max(0, parseInt(batteryMatch[1], 10)));
+      setBatteryLevel(level);
+      return;
+    }
+
     if (message.includes("INTRUSION") || message.includes("ALERT")) {
       triggerAlarm("intrusion");
     } else if (message.includes("WATER")) {
@@ -174,6 +183,7 @@ export function useBluetooth() {
       await BleClient.disconnect(nativeDeviceId.current);
       nativeDeviceId.current = null;
       setStatus("disconnected");
+      setBatteryLevel(null);
     }
   }, []);
 
@@ -207,6 +217,7 @@ export function useBluetooth() {
 
   const onWebDisconnected = useCallback(() => {
     setStatus("disconnected");
+    setBatteryLevel(null);
     webCharacteristic.current = null;
     toast({ title: "Disconnected", description: "Lost connection to Smart Bag", variant: "destructive" });
   }, [toast]);
@@ -295,5 +306,6 @@ export function useBluetooth() {
     isAlerting,
     alertType,
     stopAlarm,
+    batteryLevel,
   };
 }

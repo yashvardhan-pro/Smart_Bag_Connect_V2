@@ -1,8 +1,54 @@
 import { useAlerts } from "@/hooks/use-alerts";
 import { useBluetooth } from "@/hooks/use-bluetooth";
 import { format } from "date-fns";
-import { ShieldCheck, ShieldAlert, History, Activity, Bluetooth, RefreshCw } from "lucide-react";
+import { ShieldCheck, ShieldAlert, History, Activity, Bluetooth, RefreshCw, BatteryFull, BatteryMedium, BatteryLow, BatteryWarning } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+function BatteryIndicator({ level }: { level: number | null }) {
+  const isUnknown = level === null;
+  const pct = level ?? 0;
+
+  const color =
+    isUnknown ? "text-muted-foreground" :
+    pct > 50  ? "text-green-400" :
+    pct > 20  ? "text-yellow-400" :
+                "text-red-400";
+
+  const barColor =
+    isUnknown ? "bg-muted-foreground/30" :
+    pct > 50  ? "bg-green-400" :
+    pct > 20  ? "bg-yellow-400" :
+                "bg-red-400";
+
+  const Icon =
+    isUnknown || pct > 75 ? BatteryFull :
+    pct > 40              ? BatteryMedium :
+    pct > 15              ? BatteryLow :
+                            BatteryWarning;
+
+  return (
+    <div className="bg-background/30 rounded-xl p-3 border border-white/5" data-testid="battery-indicator">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs text-muted-foreground">Battery</div>
+        <div className={`flex items-center gap-1 ${color}`}>
+          <Icon className="w-4 h-4" />
+          <span className="text-xl font-mono" data-testid="battery-level">
+            {isUnknown ? "–%" : `${pct}%`}
+          </span>
+        </div>
+      </div>
+      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+          style={{ width: isUnknown ? "0%" : `${pct}%` }}
+        />
+      </div>
+      {!isUnknown && pct <= 20 && (
+        <p className="text-[10px] text-red-400 mt-1 font-medium tracking-wide">LOW BATTERY</p>
+      )}
+    </div>
+  );
+}
 
 interface DashboardProps {
   bluetooth: ReturnType<typeof useBluetooth>;
@@ -54,15 +100,8 @@ export default function Dashboard({ bluetooth }: DashboardProps) {
           )}
 
           {isConnected && (
-            <div className="grid grid-cols-2 gap-3">
-               <div className="bg-background/30 rounded-xl p-3 border border-white/5">
-                 <div className="text-xs text-muted-foreground mb-1">Battery</div>
-                 <div className="text-xl font-mono text-green-400">84%</div>
-               </div>
-               <div className="bg-background/30 rounded-xl p-3 border border-white/5">
-                 <div className="text-xs text-muted-foreground mb-1">Uptime</div>
-                 <div className="text-xl font-mono text-primary">2h 14m</div>
-               </div>
+            <div className="space-y-3">
+              <BatteryIndicator level={bluetooth.batteryLevel} />
             </div>
           )}
         </div>
