@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Battery, Bluetooth, LayoutDashboard, Calendar, Settings, Bell, MapPin, Loader2 } from "lucide-react";
+import { Battery, Bluetooth, Navigation, LayoutDashboard, Calendar, Settings, Bell, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavHeaderProps {
@@ -111,12 +111,12 @@ export function BottomNav({ status, onConnect, onDisconnect }: BottomNavProps) {
           );
         })}
 
-        {/* Center BT FAB */}
+        {/* Center Navigator / Connect FAB */}
         <div className="flex flex-col items-center justify-center flex-shrink-0 w-20">
           <button
             onClick={handleBtPress}
             disabled={isConnecting}
-            data-testid="button-bt-connect"
+            data-testid="button-bag-connect"
             className={cn(
               "w-14 h-14 -mt-6 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 border-4 border-background",
               fabColor,
@@ -126,11 +126,11 @@ export function BottomNav({ status, onConnect, onDisconnect }: BottomNavProps) {
             {isConnecting ? (
               <Loader2 className="w-6 h-6 text-white animate-spin" />
             ) : (
-              <Bluetooth className="w-6 h-6 text-white" />
+              <Navigation className={cn("w-6 h-6 text-white transition-transform duration-300", isConnected && "fill-white")} />
             )}
           </button>
           <span className="text-[9px] font-bold tracking-widest uppercase mt-0.5 text-muted-foreground">
-            {isConnected ? "ON" : isConnecting ? "…" : "OFF"}
+            {isConnected ? "LINKED" : isConnecting ? "…" : "CONNECT"}
           </span>
         </div>
 
