@@ -47,7 +47,7 @@ function Router() {
             <SettingsPage bluetooth={bluetooth} />
           </Route>
           <Route path="/location">
-            <LocationPage />
+            <LocationPage bluetooth={bluetooth} />
           </Route>
           <Route component={NotFound} />
         </Switch>

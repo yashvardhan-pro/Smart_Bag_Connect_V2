@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
-import { MapPin, Navigation, Crosshair, Plus, Trash2, CheckCircle2, XCircle, Loader2, RefreshCw, Compass } from "lucide-react";
+import { MapPin, Navigation, Crosshair, Plus, Trash2, CheckCircle2, XCircle, Loader2, RefreshCw, Compass, Bluetooth, BluetoothOff, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useBluetooth } from "@/hooks/use-bluetooth";
 
 interface Coords {
   lat: number;
@@ -159,7 +160,11 @@ function LiveMap({ coords, savedPlaces }: { coords: Coords; savedPlaces: SavedPl
   );
 }
 
-export default function LocationPage() {
+interface LocationPageProps {
+  bluetooth: ReturnType<typeof useBluetooth>;
+}
+
+export default function LocationPage({ bluetooth }: LocationPageProps) {
   const [coords, setCoords] = useState<Coords | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -262,6 +267,40 @@ export default function LocationPage() {
 
   return (
     <div className="pt-2 pb-24 space-y-5">
+      {/* Bag GPS Connect Button */}
+      <div className="rounded-2xl border border-border/50 bg-card/50 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Bag GPS</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {bluetooth.status === "connected"
+                ? "Receiving location data from bag"
+                : bluetooth.status === "connecting"
+                ? "Connecting to bag…"
+                : "Connect to receive bag location"}
+            </p>
+          </div>
+          <button
+            onClick={bluetooth.status === "connected" ? bluetooth.disconnect : bluetooth.connect}
+            disabled={bluetooth.status === "connecting"}
+            data-testid="button-bag-gps-connect"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
+              bluetooth.status === "connected"
+                ? "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30"
+                : "bg-primary text-primary-foreground shadow-[0_0_16px_rgba(6,182,212,0.3)] hover:shadow-[0_0_24px_rgba(6,182,212,0.5)]"
+            }`}
+          >
+            {bluetooth.status === "connecting" ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : bluetooth.status === "connected" ? (
+              <><Link2 className="w-4 h-4" /> Linked</>
+            ) : (
+              <><Bluetooth className="w-4 h-4" /> Connect Bag</>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Hero status card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-6 shadow-xl">
         <div className="absolute top-0 right-0 p-4 opacity-10">
