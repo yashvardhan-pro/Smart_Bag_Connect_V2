@@ -144,6 +144,23 @@ export default function Dashboard({ bluetooth }: DashboardProps) {
         </div>
       )}
 
+      {bluetooth.mode === "surveillance" && bluetooth.status !== "connected" && (
+        <button
+          onClick={bluetooth.connect}
+          data-testid="banner-surveillance-connect"
+          className="w-full rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex items-center gap-3 -mt-2 hover:bg-red-500/20 transition-colors active:scale-[0.98]"
+        >
+          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 animate-pulse">
+            <Bluetooth className="w-4 h-4 text-red-400" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="text-sm font-bold text-red-400">Bag not connected</p>
+            <p className="text-xs text-red-300/70">Surveillance Mode is on but the bag is offline — tap to connect now.</p>
+          </div>
+          <span className="text-xs font-bold text-red-400 shrink-0">Connect →</span>
+        </button>
+      )}
+
       {/* Alerts Feed */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
