@@ -127,11 +127,20 @@ function LiveMap({
       zoom: 17,
       zoomControl: false,
       attributionControl: false,
+      preferCanvas: true,       // Canvas renderer — much faster than SVG
+      zoomSnap: 0.5,            // Smoother zoom steps
+      zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 120, // Less sensitive scroll zoom
     });
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       subdomains: "abcd",
       maxZoom: 20,
+      maxNativeZoom: 19,  // Don't request tiles beyond native zoom
+      keepBuffer: 4,       // Pre-load extra tile rows/columns around viewport
+      updateWhenIdle: false,   // Keep loading tiles while panning
+      updateWhenZooming: false, // Don't re-request tiles mid-zoom
+      crossOrigin: true,   // Enables browser tile caching
     }).addTo(map);
 
     mapRef.current = map;
@@ -146,29 +155,43 @@ function LiveMap({
     const map = mapRef.current;
     if (!map) return;
 
-    map.setView([coords.lat, coords.lng], map.getZoom(), { animate: true });
+    const latlng: L.LatLngExpression = [coords.lat, coords.lng];
 
-    if (accuracyCircleRef.current) accuracyCircleRef.current.remove();
-    if (selfMarkerRef.current) selfMarkerRef.current.remove();
+    // Fly to new position only if the map center has moved enough (avoids jitter)
+    const current = map.getCenter();
+    const moved = haversineDistance(current.lat, current.lng, coords.lat, coords.lng);
+    if (moved > 3) {
+      map.setView(latlng, map.getZoom(), { animate: true, duration: 0.8 });
+    }
 
-    accuracyCircleRef.current = L.circle([coords.lat, coords.lng], {
-      radius: coords.accuracy,
-      color: "#06b6d4",
-      fillColor: "#06b6d4",
-      fillOpacity: 0.1,
-      weight: 1,
-      dashArray: "4",
-    }).addTo(map);
+    // Update existing markers in-place instead of removing and recreating
+    if (accuracyCircleRef.current && selfMarkerRef.current) {
+      accuracyCircleRef.current.setLatLng(latlng);
+      (accuracyCircleRef.current as L.Circle).setRadius(coords.accuracy);
+      selfMarkerRef.current.setLatLng(latlng);
+    } else {
+      if (accuracyCircleRef.current) accuracyCircleRef.current.remove();
+      if (selfMarkerRef.current) selfMarkerRef.current.remove();
 
-    selfMarkerRef.current = L.circleMarker([coords.lat, coords.lng], {
-      radius: 9,
-      color: "#06b6d4",
-      fillColor: "#06b6d4",
-      fillOpacity: 1,
-      weight: 3,
-    })
-      .addTo(map)
-      .bindPopup("<b style='color:#0f172a;font-size:12px'>You are here</b>");
+      accuracyCircleRef.current = L.circle(latlng, {
+        radius: coords.accuracy,
+        color: "#06b6d4",
+        fillColor: "#06b6d4",
+        fillOpacity: 0.1,
+        weight: 1,
+        dashArray: "4",
+      }).addTo(map);
+
+      selfMarkerRef.current = L.circleMarker(latlng, {
+        radius: 9,
+        color: "#06b6d4",
+        fillColor: "#06b6d4",
+        fillOpacity: 1,
+        weight: 3,
+      })
+        .addTo(map)
+        .bindPopup("<b style='color:#0f172a;font-size:12px'>You are here</b>");
+    }
   }, [coords]);
 
   useEffect(() => {
@@ -188,12 +211,17 @@ function LiveMap({
     });
   }, [savedPlaces, coords]);
 
-  // Live bag GPS marker
+  // Live bag GPS marker — move in-place if it already exists
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (bagMarkerRef.current) { bagMarkerRef.current.remove(); bagMarkerRef.current = null; }
-    if (bagLocation) {
+    if (!bagLocation) {
+      if (bagMarkerRef.current) { bagMarkerRef.current.remove(); bagMarkerRef.current = null; }
+      return;
+    }
+    if (bagMarkerRef.current) {
+      bagMarkerRef.current.setLatLng([bagLocation.lat, bagLocation.lng]);
+    } else {
       bagMarkerRef.current = L.marker([bagLocation.lat, bagLocation.lng], { icon: makeBagIcon(true) })
         .addTo(map)
         .bindPopup("<div style='color:#0f172a;font-size:12px'><b>🎒 Bag (Live GPS)</b></div>");
