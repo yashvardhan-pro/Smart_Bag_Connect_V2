@@ -150,31 +150,42 @@ export function useBluetooth() {
 
   // 🔥 FIX: Parse structured ALERT messages properly
   if (message.startsWith("ALERT:")) {
-    const type = message.split(":")[1] || "";
+  const type = message.replace("ALERT:", "").trim();
 
-    if (type.includes("WATER")) {
-      triggerAlarm("water");
-    } 
-    else if (type.includes("SURVEILLANCE") || type.includes("MOTION") || type.includes("PERSON")) {
-      if (modeRef.current === "surveillance") {
-        triggerAlarm("surveillance");
-      }
-    } 
-    else if (type.includes("MISUSE") || type.includes("OVERRIDE")) {
-      triggerAlarm("override");
-    } 
-    else {
-      triggerAlarm("intrusion"); // BAG OPENED, default security breach
-    }
-
-    return;
+  if (type.includes("WATER")) {
+    triggerAlarm("water");
   }
 
-  // fallback (optional safety)
-  if (message.includes("INTRUSION")) {
+  else if (
+    type.includes("SURVEILLANCE") ||
+    type.includes("MOTION") ||
+    type.includes("PERSON")
+  ) {
+    if (modeRef.current === "surveillance") {
+      triggerAlarm("surveillance");
+    }
+  }
+
+  else if (
+    type.includes("MISUSE") ||
+    type.includes("OVERRIDE")
+  ) {
+    triggerAlarm("override");
+  }
+
+  else if (
+    type.includes("BAG") ||
+    type.includes("OPEN")
+  ) {
     triggerAlarm("intrusion");
   }
-}, [triggerAlarm]);
+
+  else {
+    triggerAlarm("intrusion"); // safety fallback
+  }
+
+  return;
+}
 
   // ─── Native (Capacitor) handlers ──────────────────────────────────────────
 
