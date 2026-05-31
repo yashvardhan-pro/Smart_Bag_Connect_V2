@@ -126,10 +126,12 @@ export function useBluetooth() {
   // ─── Message parser (shared between native & web) ─────────────────────────
 
   const handleMessage = useCallback((raw: string) => {
-  const message = raw.trim().toUpperCase();
+  const trimmed = raw.trim();
+  const message = trimmed.toUpperCase();
+
   console.log("[BLE] Received:", message);
 
-  // Battery
+  // ─── Battery ─────────────────────────
   const batteryMatch = message.match(/BATTERY:(\d+)/);
   if (batteryMatch) {
     const level = Math.min(100, Math.max(0, parseInt(batteryMatch[1], 10)));
@@ -137,55 +139,62 @@ export function useBluetooth() {
     return;
   }
 
-  // GPS
-  const gpsMatch = raw.trim().match(/^GPS:([-\d.]+),([-\d.]+)$/i);
+  // ─── GPS ─────────────────────────────
+  const gpsMatch = trimmed.match(/^GPS:([-\d.]+),([-\d.]+)$/i);
   if (gpsMatch) {
     const lat = parseFloat(gpsMatch[1]);
     const lng = parseFloat(gpsMatch[2]);
+
     if (!isNaN(lat) && !isNaN(lng)) {
       setBagLocation({ lat, lng });
     }
     return;
   }
 
-  // 🔥 FIX: Parse structured ALERT messages properly
+  // ─── ALERT parsing ───────────────────
   if (message.startsWith("ALERT:")) {
-  const type = message.replace("ALERT:", "").trim();
+    const type = message.replace("ALERT:", "").trim();
 
-  if (type.includes("WATER")) {
-    triggerAlarm("water");
-  }
-
-  else if (
-    type.includes("SURVEILLANCE") ||
-    type.includes("MOTION") ||
-    type.includes("PERSON")
-  ) {
-    if (modeRef.current === "surveillance") {
-      triggerAlarm("surveillance");
+    if (type.includes("WATER")) {
+      triggerAlarm("water");
     }
+
+    else if (
+      type.includes("SURVEILLANCE") ||
+      type.includes("MOTION") ||
+      type.includes("PERSON")
+    ) {
+      if (modeRef.current === "surveillance") {
+        triggerAlarm("surveillance");
+      }
+    }
+
+    else if (
+      type.includes("MISUSE") ||
+      type.includes("OVERRIDE")
+    ) {
+      triggerAlarm("override");
+    }
+
+    else if (
+      type.includes("OPEN") ||
+      type.includes("BAG")
+    ) {
+      triggerAlarm("intrusion");
+    }
+
+    else {
+      triggerAlarm("intrusion");
+    }
+
+    return;
   }
 
-  else if (
-    type.includes("MISUSE") ||
-    type.includes("OVERRIDE")
-  ) {
-    triggerAlarm("override");
-  }
-
-  else if (
-    type.includes("BAG") ||
-    type.includes("OPEN")
-  ) {
+  // ─── fallback ────────────────────────
+  if (message.includes("INTRUSION")) {
     triggerAlarm("intrusion");
   }
-
-  else {
-    triggerAlarm("intrusion"); // safety fallback
-  }
-
-  return;
-}
+}, [triggerAlarm]);
 
   // ─── Native (Capacitor) handlers ──────────────────────────────────────────
 
