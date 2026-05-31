@@ -126,39 +126,55 @@ export function useBluetooth() {
   // ─── Message parser (shared between native & web) ─────────────────────────
 
   const handleMessage = useCallback((raw: string) => {
-    const message = raw.trim().toUpperCase();
-    console.log("[BLE] Received:", message);
+  const message = raw.trim().toUpperCase();
+  console.log("[BLE] Received:", message);
 
-    const batteryMatch = message.match(/BATTERY:(\d+)/);
-    if (batteryMatch) {
-      const level = Math.min(100, Math.max(0, parseInt(batteryMatch[1], 10)));
-      setBatteryLevel(level);
-      return;
+  // Battery
+  const batteryMatch = message.match(/BATTERY:(\d+)/);
+  if (batteryMatch) {
+    const level = Math.min(100, Math.max(0, parseInt(batteryMatch[1], 10)));
+    setBatteryLevel(level);
+    return;
+  }
+
+  // GPS
+  const gpsMatch = raw.trim().match(/^GPS:([-\d.]+),([-\d.]+)$/i);
+  if (gpsMatch) {
+    const lat = parseFloat(gpsMatch[1]);
+    const lng = parseFloat(gpsMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setBagLocation({ lat, lng });
     }
+    return;
+  }
 
-    // GPS:lat,lng — sent by bag hardware when it has a GPS module
-    const gpsMatch = raw.trim().match(/^GPS:([-\d.]+),([-\d.]+)$/i);
-    if (gpsMatch) {
-      const lat = parseFloat(gpsMatch[1]);
-      const lng = parseFloat(gpsMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        setBagLocation({ lat, lng });
-      }
-      return;
-    }
+  // 🔥 FIX: Parse structured ALERT messages properly
+  if (message.startsWith("ALERT:")) {
+    const type = message.split(":")[1] || "";
 
-    if (message.includes("INTRUSION") || message.includes("ALERT")) {
-      triggerAlarm("intrusion");
-    } else if (message.includes("WATER")) {
+    if (type.includes("WATER")) {
       triggerAlarm("water");
-    } else if (message.includes("OVERRIDE")) {
-      triggerAlarm("override");
-    } else if (message.includes("SURVEILLANCE") || message.includes("MOTION") || message.includes("PROXIMITY")) {
+    } 
+    else if (type.includes("SURVEILLANCE") || type.includes("MOTION") || type.includes("PERSON")) {
       if (modeRef.current === "surveillance") {
         triggerAlarm("surveillance");
       }
+    } 
+    else if (type.includes("MISUSE") || type.includes("OVERRIDE")) {
+      triggerAlarm("override");
+    } 
+    else {
+      triggerAlarm("intrusion"); // BAG OPENED, default security breach
     }
-  }, [triggerAlarm]);
+
+    return;
+  }
+
+  // fallback (optional safety)
+  if (message.includes("INTRUSION")) {
+    triggerAlarm("intrusion");
+  }
+}, [triggerAlarm]);
 
   // ─── Native (Capacitor) handlers ──────────────────────────────────────────
 
